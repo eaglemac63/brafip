@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import { Loader2, LogIn } from "lucide-react";
 
-export default function JuradoLoginPage() {
+function JuradoLoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const redirect = params.get("redirect") || "/chamada/jurado/area";
@@ -84,5 +84,13 @@ export default function JuradoLoginPage() {
         </button>
       </form>
     </div>
+  );
+}
+
+export default function JuradoLoginPage() {
+  return (
+    <Suspense fallback={<div className="mx-auto max-w-md py-12 text-center text-muted-foreground">Carregando...</div>}>
+      <JuradoLoginForm />
+    </Suspense>
   );
 }
