@@ -1,0 +1,90 @@
+# Unificação do Site Institucional BraFip e Plataforma Chamada de Ideias 2026
+
+Com base no nosso alinhamento durante o "grill-me" (entrevista iterativa) e na análise de todo o código atual dos dois projetos (`brafip-main` e `brafip-chamada-2026`), apresento o plano de implementação completo para consolidar ambos em um monorepo e solucionar os problemas de arquitetura encontrados.
+
+## User Review Required
+
+> [!WARNING]
+> **Refatoração da Avaliação do Jurado**
+> A página atual do jurado (`app/jurado/avaliacao/[id]/page.tsx`) não apenas usava critérios genéricos, mas tentava gravar dados diretos no Firestore Client-side, ignorando o score calculado pelo backend. O plano prevê remover essa lógica client-side e integrá-la diretamente à rota `/api/avaliacoes` via POST, utilizando a lista correta de `CRITERIOS_AVALIACAO` do `types/index.ts`.
+
+> [!IMPORTANT]
+> **Estratégia de Monorepo e Domínio Único**
+> Iremos iniciar o novo projeto mesclado no diretório base `/Users/MAC/Antigravity /BraFip`. As funcionalidades institucionais e o CMS (Sanity) ficarão em suas rotas padrão (como `/blog`, `/portfolio`), enquanto todas as funcionalidades do sistema Chamada de Ideias (inscrição, painéis admin e jurado, etc) ficarão sob o subpath `/chamada` para manter as rotas limpas e organizadas sob um domínio único (`brafip.org.br`).
+
+## Open Questions
+
+> [!NOTE]
+> 1. **Mecanismo Oficial de Inscrição:** O repositório contém um arquivo complexo `lib/surveymonkey.ts` sugerindo uma sincronização via webhook do SurveyMonkey. No entanto, existe um formulário Next.js nativo em `app/inscricao`. Qual será a origem *definitiva* das submissões dos usuários: Formulário React no site ou Formulário no SurveyMonkey enviado via webhook?
+> 2. **Caminho do Admin/Jurado:** Com a plataforma passando a usar o subpath `/chamada`, as rotas seguras do admin ficarão em `/chamada/admin/dashboard` e as do jurado em `/chamada/jurado/area`. Isso soa apropriado para a organização das URLs?
+
+## Proposed Changes
+
+Abaixo está o agrupamento lógico das modificações e como os dois projetos serão fundidos e finalizados no workspace do novo repositório.
+
+---
+
+### Estrutura Base e Dependências (Monorepo)
+
+Unificaremos o projeto inicializando o `package.json` base, integrando as dependências do Sanity (para `brafip-main`) e do Firebase + Resend + Google Sheets (do `brafip-chamada-2026`). Manteremos o Tailwind CSS com os tokens e fontes BraFip (EB Garamond e Inter).
+
+#### [NEW] [package.json](file:///Users/MAC/Antigravity /BraFip/package.json)
+- Mescla de dependências, scripts e frameworks de build.
+#### [NEW] [tailwind.config.ts](file:///Users/MAC/Antigravity /BraFip/tailwind.config.ts)
+- Configuração englobando todos os diretórios (`app`, `components`, `sanity`, `emails`).
+#### [NEW] [.env.local](file:///Users/MAC/Antigravity /BraFip/.env.local)
+- Migração de todas as chaves (Firebase, Sanity, Resend).
+
+---
+
+### Módulos Institucionais (Sanity CMS + Layout)
+
+Copiaremos e adaptaremos o código visual do `brafip-main` para compor o escopo principal do site, ajustando os providers e layouts para garantir que funcionem junto ao backend do Firebase quando necessário.
+
+#### [NEW] [sanity/](file:///Users/MAC/Antigravity /BraFip/src/sanity)
+- Estrutura completa do Studio do Sanity (schemas, plugins, client).
+#### [NEW] [app/(site)/page.tsx](file:///Users/MAC/Antigravity /BraFip/src/app/(site)/page.tsx)
+- Landing page principal baseada em `brafip-main`.
+#### [NEW] [components/](file:///Users/MAC/Antigravity /BraFip/src/components)
+- Unificação das pastas de componentes (Hero, About, Entities + forms UI do shadcn/ui).
+
+---
+
+### Módulo Plataforma Chamada de Ideias
+
+Moveremos as rotas da Chamada de Ideias para dentro de um route group ou diretório específico como `app/chamada`, adaptando os caminhos relativos e as lógicas de auth.
+
+#### [NEW] [app/chamada/](file:///Users/MAC/Antigravity /BraFip/src/app/chamada)
+- Todas as rotas referentes ao projeto 2026: `/inscricao`, `/admin`, `/jurado`.
+#### [NEW] [lib/firebase/](file:///Users/MAC/Antigravity /BraFip/src/lib/firebase)
+- Configuração centralizada do client e do SDK Admin do Firebase.
+#### [NEW] [types/index.ts](file:///Users/MAC/Antigravity /BraFip/src/types/index.ts)
+- Definição canônica das interfaces e dos arrays de `CRITERIOS_AVALIACAO`.
+#### [NEW] [lib/score.ts](file:///Users/MAC/Antigravity /BraFip/src/lib/score.ts)
+- Regras de cálculo (ScoreBruto e ScoreNormalizado).
+
+---
+
+### Refatoração da Avaliação (Frontend Jurado)
+
+Conforme alinhado na nossa sessão, este é o ajuste mais importante. A interface antiga do formulário (que utilizava variáveis erradas e escrita via client SDK) será totalmente reescrita para consumir a lista de critérios dinamicamente e enviar dados normalizados via API.
+
+#### [MODIFY] [app/chamada/jurado/avaliacao/[id]/page.tsx](file:///Users/MAC/Antigravity /BraFip/src/app/chamada/jurado/avaliacao/[id]/page.tsx)
+- Consumo direto de `CRITERIOS_AVALIACAO` de `types/index.ts` (7 critérios dinâmicos com suas respectivas notas personalizadas).
+- Refatoração do `handleSave` para disparar um HTTP POST `/api/avaliacoes` contendo os critérios nivelados `criterio1_inovacao`, `criterio2_consorcios` em seu payload flat.
+- Exibição condicional de loaders e erros.
+
+#### [NEW] [app/api/avaliacoes/route.ts](file:///Users/MAC/Antigravity /BraFip/src/app/api/avaliacoes/route.ts)
+- Endpoint seguro (Serverless API) validando as credenciais e preenchendo as métricas utilizando a Collection do Firestore.
+
+## Verification Plan
+
+### Automated Tests
+- Testar o build estático do Next.js via `npm run build` para checar dependências circulares entre a camada do CMS (Sanity) e o Firebase Client.
+- Executar os linters integrados e checagem de tipos estáticos (`tsc --noEmit`).
+
+### Manual Verification
+- Acesso à rota raiz `/` para garantir o carregamento do site institucional via Sanity.
+- Submissão de uma inscrição simulada no formulário de chamadas em `/chamada/inscricao`.
+- Avaliação completa dessa inscrição autenticando-se como jurado `/chamada/jurado/login` para confirmar que a pontuação salva respeita a nova lógica de 39 pontos máximos.
+- Verificação do score na tabela atualizada no dashboard em `/chamada/admin/dashboard`.
