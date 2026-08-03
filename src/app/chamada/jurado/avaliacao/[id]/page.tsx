@@ -39,7 +39,18 @@ export default function AvaliacaoPage() {
   const [notas, setNotas] = useState<Record<string, number>>({});
   const [observacoes, setObservacoes] = useState("");
 
-  // ── Carregar inscrição ──
+  // ── Fallback: inicializar notas com 0 se ainda vazias (após carregar) ──
+  useEffect(() => {
+    if (Object.keys(notas).length === 0) {
+      const iniciais: Record<string, number> = {};
+      for (const c of CRITERIOS_AVALIACAO) {
+        iniciais[`criterio${c.id}_${c.slug}`] = 0;
+      }
+      setNotas(iniciais);
+    }
+  }, [notas]);
+
+  // ── Carregar inscrição + avaliação existente do jurado ──
   useEffect(() => {
     const unsub = onAuthStateChanged(getFirebaseAuth(), async (user) => {
       if (!user) {
@@ -49,14 +60,37 @@ export default function AvaliacaoPage() {
 
       try {
         const token = await user.getIdToken();
-        const res = await fetch(`/api/inscricoes/${inscricaoId}`, {
-          headers: { Authorization: `Bearer ${token}` },
+
+        // Busca inscrição
+        const resInsc = await fetch(`/api/inscricoes/${inscricaoId}`, {
+          headers: { Authorization: *** ${token}` },
         });
-        if (res.ok) {
-          const data = await res.json();
-          setInscricao(data.inscricao);
+        if (resInsc.ok) {
+          const dataInsc = await resInsc.json();
+          setInscricao(dataInsc.inscricao);
         } else {
           setErro("Inscrição não encontrada.");
+        }
+
+        // Busca avaliações existentes desta inscrição
+        const resAvals = await fetch(`/api/avaliacoes?inscricaoId=${inscricaoId}`, {
+          headers: { Authorization: *** ${token}` },
+        });
+        if (resAvals.ok) {
+          const dataAvals = await resAvals.json();
+          const minhas = (dataAvals.avaliacoes ?? []).find(
+            (a: { juradoId: string }) => a.juradoId === user.uid,
+          );
+          if (minhas) {
+            // Pré-preencher notas com a avaliação existente
+            const notasExistentes: Record<string, number> = {};
+            for (const c of CRITERIOS_AVALIACAO) {
+              const key = `criterio${c.id}_${c.slug}`;
+              notasExistentes[key] = (minhas as Record<string, number>)[key] ?? 0;
+            }
+            setNotas(notasExistentes);
+            setObservacoes((minhas as { observacoes?: string }).observacoes ?? "");
+          }
         }
       } catch {
         setErro("Erro ao carregar inscrição.");
@@ -67,15 +101,6 @@ export default function AvaliacaoPage() {
 
     return () => unsub();
   }, [inscricaoId, router]);
-
-  // ── Inicializar notas com 0 ──
-  useEffect(() => {
-    const iniciais: Record<string, number> = {};
-    for (const c of CRITERIOS_AVALIACAO) {
-      iniciais[`criterio${c.id}_${c.slug}`] = 0;
-    }
-    setNotas(iniciais);
-  }, []);
 
   // ── handleSave: POST /api/avaliacoes ──
   async function handleSave() {

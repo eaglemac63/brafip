@@ -9,13 +9,12 @@ export const dynamic = "force-dynamic";
 
 async function getInscricoes() {
   const db = getFirestore();
-  const snap = await db
-    .collection("inscricoes")
-    .orderBy("scoreBruto", "desc")
-    .limit(100)
-    .get();
-
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Inscricao);
+  // Sem orderBy para evitar indice composto. Ordena por score no cliente.
+  const snap = await db.collection("inscricoes").limit(100).get();
+  const inscricoes = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Inscricao);
+  // Ordena por scoreBruto desc (no cliente, sem exigir indice)
+  inscricoes.sort((a, b) => (b.scoreBruto ?? 0) - (a.scoreBruto ?? 0));
+  return inscricoes;
 }
 
 export default async function AdminDashboardPage() {
