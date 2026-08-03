@@ -3,7 +3,7 @@
 // ════════════════════════════════════════════════
 
 import { NextRequest, NextResponse } from "next/server";
-import { getFirestore, type Firestore } from "@/lib/firebase/admin";
+import { getFirestore } from "@/lib/firebase/admin";
 import { verifySession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   }
 
   const status = request.nextUrl.searchParams.get("status");
-  const db: Firestore = getFirestore();
+  const db = getFirestore();
 
   // Sem orderBy para evitar exigir indice composto (status + createdAt).
   // Filtra por status se informado.
@@ -26,7 +26,10 @@ export async function GET(request: NextRequest) {
   }
 
   const snap = await query.limit(100).get();
-  const inscricoes = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const inscricoes = snap.docs.map((d: { id: string; data: () => Record<string, unknown> }) => ({
+    id: d.id,
+    ...d.data(),
+  }));
 
   return NextResponse.json({ inscricoes });
 }
