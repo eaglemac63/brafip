@@ -4,12 +4,13 @@ import { useEffect, useState } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import Link from "next/link";
-import { Loader2, LogOut, ClipboardList } from "lucide-react";
+import { Loader2, LogOut, ClipboardList, Pencil, CheckCircle2 } from "lucide-react";
 import type { Inscricao } from "@/types/index";
 
 export default function JuradoAreaPage() {
   const [loading, setLoading] = useState(true);
   const [inscricoes, setInscricoes] = useState<Inscricao[]>([]);
+  const [meuUid, setMeuUid] = useState<string | null>(null);
   const [erro, setErro] = useState("");
 
   useEffect(() => {
@@ -18,11 +19,11 @@ export default function JuradoAreaPage() {
         window.location.href = "/chamada/jurado/login";
         return;
       }
+      setMeuUid(user.uid);
 
       try {
         const token = await user.getIdToken();
-        // Busca inscrições pendentes/em avaliação para o jurado
-        // (num cenário real, filtrar por categoria do jurado)
+        // Busca inscrições pendentes/em avaliação
         const res = await fetch("/api/inscricoes?status=pendente,em_avaliacao", {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -30,7 +31,7 @@ export default function JuradoAreaPage() {
           const data = await res.json();
           setInscricoes(data.inscricoes ?? []);
         }
-      } catch (err) {
+      } catch {
         setErro("Não foi possível carregar as inscrições.");
       } finally {
         setLoading(false);
@@ -46,6 +47,14 @@ export default function JuradoAreaPage() {
     window.location.href = "/chamada/jurado/login";
   }
 
+  // Separar por estado de avaliação deste jurado
+  const pendentes = inscricoes.filter(
+    (i) => !i.avaliadoPor || !i.avaliadoPor.includes(meuUid ?? ""),
+  );
+  const avaliadas = inscricoes.filter(
+    (i) => i.avaliadoPor && i.avaliadoPor.includes(meuUid ?? ""),
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -58,9 +67,10 @@ export default function JuradoAreaPage() {
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl">Inscrições para avaliar</h1>
+          <h1 className="text-3xl">Minhas Avaliações</h1>
           <p className="mt-2 text-muted-foreground">
-            Selecione uma inscrição para iniciar a avaliação pelos 7 critérios.
+            Separei em pendentes e já avaliadas. Você pode corrigir suas avaliações
+            a qualquer momento — todo ajuste fica registrado para auditoria.
           </p>
         </div>
         <button onClick={handleLogout} className="btn-secondary">
@@ -74,7 +84,53 @@ export default function JuradoAreaPage() {
         </div>
       )}
 
-      <div className="mt-8 overflow-hidden rounded-lg border bg-white">
+      {/* Seção 1: Pendentes */}
+      <Section
+        titulo="Ideias Pendentes"
+        icone={<ClipboardList className="mr-2 h-5 w-5" />}
+        inscricoes={pendentes}
+        vazio="Nenhuma ideia pendente no momento."
+        corrigir={false}
+      />
+
+      {/* Seção 2: Avaliadas */}
+      <div className="mt-12">
+        <Section
+          titulo="Ideias Avaliadas"
+          icone={<CheckCircle2 className="mr-2 h-5 w-5 text-green-600" />}
+          inscricoes={avaliadas}
+          vazio="Você ainda não avaliou nenhuma ideia."
+          corrigir={true}
+        />
+      </div>
+    </div>
+  );
+}
+
+function Section({
+  titulo,
+  icone,
+  inscricoes,
+  vazio,
+  corrigir,
+}: {
+  titulo: string;
+  icone: React.ReactNode;
+  inscricoes: Inscricao[];
+  vazio: string;
+  corrigir: boolean;
+}) {
+  return (
+    <section>
+      <h2 className="mb-4 flex items-center text-xl font-semibold">
+        {icone}
+        {titulo}
+        <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-sm text-muted-foreground">
+          {inscricoes.length}
+        </span>
+      </h2>
+
+      <div className="overflow-hidden rounded-lg border bg-white">
         <table className="w-full text-sm">
           <thead className="border-b bg-muted/50">
             <tr>
@@ -91,7 +147,7 @@ export default function JuradoAreaPage() {
               <tr>
                 <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
                   <ClipboardList className="mx-auto h-12 w-12 opacity-40" />
-                  <p className="mt-4">Nenhuma inscrição disponível para avaliação.</p>
+                  <p className="mt-4">{vazio}</p>
                 </td>
               </tr>
             ) : (
@@ -109,9 +165,13 @@ export default function JuradoAreaPage() {
                   <td className="px-4 py-3 text-right">
                     <Link
                       href={`/chamada/jurado/avaliacao/${insc.id}`}
-                      className="text-primary hover:underline"
+                      className="inline-flex items-center text-primary hover:underline"
                     >
-                      Avaliar →
+                      {corrigir ? (
+                        <><Pencil className="mr-1 h-3 w-3" /> Corrigir</>
+                      ) : (
+                        "Avaliar →"
+                      )}
                     </Link>
                   </td>
                 </tr>
@@ -120,6 +180,6 @@ export default function JuradoAreaPage() {
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
   );
 }

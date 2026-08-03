@@ -82,9 +82,27 @@ export async function POST(request: NextRequest) {
 
     const now = new Date().toISOString();
     let avaliacaoRef;
+    let acao: "criacao" | "correcao" = "criacao";
+    let antes: { scoreBruto: number; scoreNormalizado: number; notas: Record<string, number> } | undefined;
 
     if (!avaliacoesSnap.empty) {
       // Atualiza a avaliação existente (não cria duplicata)
+      acao = "correcao";
+      const existente = avaliacoesSnap.docs[0].data() as Record<string, number> & {
+        scoreBruto: number;
+        scoreNormalizado: number;
+      };
+      antes = {
+        scoreBruto: existente.scoreBruto,
+        scoreNormalizado: existente.scoreNormalizado,
+        notas: { ...notas }, // placeholder; preenche abaixo com valores reais
+      };
+      // captura notas reais do documento existente
+      for (const c of CRITERIOS_AVALIACAO) {
+        const key = `criterio${c.id}_${c.slug}`;
+        antes.notas[key] = (existente[key] as number) ?? 0;
+      }
+
       avaliacaoRef = avaliacoesSnap.docs[0].ref;
       await avaliacaoRef.update({
         ...notas,
@@ -107,6 +125,23 @@ export async function POST(request: NextRequest) {
         observacoes: body.observacoes ?? null,
       });
     }
+
+    // ── 7b. Gravar log de auditoria (rastreia qualidade dos julgamentos) ──
+    const depois = { scoreBruto, scoreNormalizado, notas: { ...notas } };
+    const diferencaScore = Math.abs(
+      scoreBruto - (antes?.scoreBruto ?? 0),
+    );
+    await db.collection("avaliacoes_log").add({
+      avaliacaoId: avaliacaoRef.id,
+      inscricaoId,
+      juradoId: user.uid,
+      juradoNome,
+      acao,
+      antes,
+      depois,
+      diferencaScore,
+      createdAt: now,
+    });
 
     // ── 8. Vincular à inscrição e recalcular score médio ──
     await db.runTransaction(async (tx) => {

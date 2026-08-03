@@ -106,6 +106,7 @@ export interface Inscricao {
 
   // Avaliações vinculadas
   avaliacoesIds?: string[];
+  avaliadoPor?: string[];        // uids de jurados que já avaliaram
   scoreBruto?: number;
   scoreNormalizado?: number;    // 0..10
 }
@@ -147,6 +148,31 @@ export type PayloadAvaliacao = Omit<
   Avaliacao,
   "id" | "createdAt" | "updatedAt" | "scoreBruto" | "scoreNormalizado" | "juradoNome"
 >;
+
+// ── Log de auditoria de avaliações ──────────────
+// Toda criação ou correção de avaliação gera um registro aqui,
+// para rastrear a qualidade dos julgamentos (ex: quanto um jurado
+// muda de nota ao corrigir).
+export interface AvaliacaoLog {
+  id?: string;                   // Firestore doc id (gerado)
+  avaliacaoId: string;           // doc da avaliação afetada
+  inscricaoId: string;
+  juradoId: string;
+  juradoNome: string;
+  acao: "criacao" | "correcao";
+  antes?: {
+    scoreBruto: number;
+    scoreNormalizado: number;
+    notas: Record<string, number>;
+  };
+  depois: {
+    scoreBruto: number;
+    scoreNormalizado: number;
+    notas: Record<string, number>;
+  };
+  diferencaScore: number;        // |depois.scoreBruto - (antes?.scoreBruto ?? 0)|
+  createdAt: string;             // ISO
+}
 
 // ── Sanity ──────────────────────────────────────
 
