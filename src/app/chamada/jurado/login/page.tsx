@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { firebaseAuth } from "@/lib/firebase/client";
+import { getFirebaseAuth } from "@/lib/firebase/client";
 import { Loader2, LogIn } from "lucide-react";
 
 export default function JuradoLoginPage() {
@@ -22,7 +22,7 @@ export default function JuradoLoginPage() {
     setErro("");
 
     try {
-      const cred = await signInWithEmailAndPassword(firebaseAuth, email, senha);
+      const cred = await signInWithEmailAndPassword(getFirebaseAuth(), email, senha);
       const token = await cred.user.getIdToken();
 
       // O cookie __session é lido pelo middleware e pelos Route Handlers.

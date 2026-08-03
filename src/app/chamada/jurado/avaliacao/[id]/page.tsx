@@ -19,7 +19,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
-import { firebaseAuth } from "@/lib/firebase/client";
+import { getFirebaseAuth } from "@/lib/firebase/client";
 import { CRITERIOS_AVALIACAO } from "@/types/index";
 import type { Inscricao } from "@/types/index";
 import { CheckCircle, Loader2, Save, AlertCircle } from "lucide-react";
@@ -41,7 +41,7 @@ export default function AvaliacaoPage() {
 
   // ── Carregar inscrição ──
   useEffect(() => {
-    const unsub = onAuthStateChanged(firebaseAuth, async (user) => {
+    const unsub = onAuthStateChanged(getFirebaseAuth(), async (user) => {
       if (!user) {
         router.push("/chamada/jurado/login?redirect=/chamada/jurado/avaliacao/" + inscricaoId);
         return;
@@ -83,7 +83,7 @@ export default function AvaliacaoPage() {
     setErro("");
 
     try {
-      const user = firebaseAuth.currentUser;
+      const user = getFirebaseAuth().currentUser;
       if (!user) throw new Error("Sessão expirada");
 
       const token = await user.getIdToken();

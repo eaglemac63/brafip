@@ -4,12 +4,15 @@
 //
 // Usado no browser (login do jurado, dashboard admin).
 // NUNCA gravar dados via client SDK — sempre via /api/*.
+//
+// IMPORTANTE: o init é DEFERIDO para o browser (não module-scope).
+// No build/SSR o Next prerenderiza as páginas client — se inicializássemos
+// aqui, o Firebase tentaria ler NEXT_PUBLIC_FIREBASE_API_KEY vazio e quebraria
+// o build com "auth/invalid-api-key". Por isso usamos getFirebaseAuth() após mount.
 
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-// firebase/firestore expõe tipos via firebase/app; import dinâmico para evitar
-// problema de declaração de tipos do subpath ESM
-import { getFirestore as getClientFirestore } from "firebase/firestore";
+import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
+import { getAuth, type Auth } from "firebase/auth";
+import { getFirestore as getClientFirestore, type Firestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -20,8 +23,39 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+let app: FirebaseApp | null = null;
+let auth: Auth | null = null;
+let db: Firestore | null = null;
 
-export const firebaseAuth = getAuth(app);
-export const firebaseDb = getClientFirestore(app);
-export default app;
+/**
+ * Retorna a instância do Auth. SÓ deve ser chamado no browser (após mount).
+ * Inicializa o app na primeira chamada.
+ */
+export function getFirebaseAuth(): Auth {
+  if (typeof window === "undefined") {
+    throw new Error("getFirebaseAuth() só pode ser chamado no browser");
+  }
+  if (!app) {
+    app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  }
+  if (!auth) {
+    auth = getAuth(app);
+  }
+  return auth;
+}
+
+/**
+ * Retorna a instância do Firestore client. SÓ no browser.
+ */
+export function getFirebaseDb(): Firestore {
+  if (typeof window === "undefined") {
+    throw new Error("getFirebaseDb() só pode ser chamado no browser");
+  }
+  if (!app) {
+    app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  }
+  if (!db) {
+    db = getClientFirestore(app);
+  }
+  return db;
+}

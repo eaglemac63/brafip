@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { firebaseAuth } from "@/lib/firebase/client";
+import { getFirebaseAuth } from "@/lib/firebase/client";
 import Link from "next/link";
 import { Loader2, LogOut, ClipboardList } from "lucide-react";
 import type { Inscricao } from "@/types/index";
@@ -13,7 +13,7 @@ export default function JuradoAreaPage() {
   const [erro, setErro] = useState("");
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(firebaseAuth, async (user) => {
+    const unsub = onAuthStateChanged(getFirebaseAuth(), async (user) => {
       if (!user) {
         window.location.href = "/chamada/jurado/login";
         return;
@@ -41,7 +41,7 @@ export default function JuradoAreaPage() {
   }, []);
 
   async function handleLogout() {
-    await signOut(firebaseAuth);
+    await signOut(getFirebaseAuth());
     document.cookie = "__session=; path=/; max-age=0";
     window.location.href = "/chamada/jurado/login";
   }
