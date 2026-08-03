@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
   let query = db.collection("inscricoes").orderBy("createdAt", "desc");
   if (status) {
     const statuses = status.split(",");
-    query = query.where("status", "in", statuses) as any;
+    query = query.where("status", "in", statuses);
   }
 
   const snap = await query.limit(100).get();

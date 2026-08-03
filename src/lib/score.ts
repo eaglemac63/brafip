@@ -57,7 +57,7 @@ export function normalizarScore(scoreBruto: number): number {
  * Descarta campos extras que não pertencem ao score.
  */
 export function extrairNotasDoPayload(
-  payload: Record<string, any>,
+  payload: Record<string, unknown>,
 ): Record<string, number> {
   const notas: Record<string, number> = {};
 

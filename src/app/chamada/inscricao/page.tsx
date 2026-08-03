@@ -36,8 +36,8 @@ export default function InscricaoPage() {
       const data = await res.json();
       setProtocolo(data.protocolo);
       setStatus("ok");
-    } catch (err: any) {
-      setErro(err.message);
+    } catch (err: unknown) {
+      setErro(err instanceof Error ? err.message : "Erro ao enviar inscrição");
       setStatus("erro");
     }
   }

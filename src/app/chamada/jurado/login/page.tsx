@@ -31,7 +31,7 @@ export default function JuradoLoginPage() {
       document.cookie = `__session=${token}; path=/; max-age=${60 * 60}; samesite=lax`;
 
       router.push(redirect);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setErro("Email ou senha inválidos.");
       setStatus("erro");
     }

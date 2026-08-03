@@ -127,10 +127,12 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 },
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("[avaliacoes] Erro:", err);
+    const message =
+      err instanceof Error ? err.message : "Erro interno ao salvar avaliação";
     return NextResponse.json(
-      { error: err?.message ?? "Erro interno ao salvar avaliação" },
+      { error: message },
       { status: 500 },
     );
   }

@@ -155,7 +155,7 @@ export interface SanityPagina {
   _type: "pagina";
   slug: { current: string };
   titulo: string;
-  conteudo: any[];              // Portable Text
+  conteudo: unknown[];              // Portable Text
   seo?: { title: string; description: string; image?: string };
 }
 
@@ -165,7 +165,7 @@ export interface SanityPost {
   slug: { current: string };
   titulo: string;
   excerpt: string;
-  body: any[];
+  body: unknown[];
   publishedAt: string;
   autor?: string;
   capa?: string;

@@ -21,8 +21,8 @@ export async function verifySession(
   cookies: NextRequest["cookies"] | Record<string, string>,
 ): Promise<SessionUser | null> {
   const token =
-    typeof (cookies as any).get === "function"
-      ? (cookies as any).get("__session")?.value
+    typeof cookies.get === "function"
+      ? cookies.get("__session")?.value
       : (cookies as Record<string, string>)["__session"];
 
   if (!token) return null;

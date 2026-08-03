@@ -110,8 +110,8 @@ export default function AvaliacaoPage() {
 
       const data = await res.json();
       setSucesso(true);
-    } catch (err: any) {
-      setErro(err.message);
+    } catch (err: unknown) {
+      setErro(err instanceof Error ? err.message : "Erro ao salvar avaliação");
     } finally {
       setSalvando(false);
     }
