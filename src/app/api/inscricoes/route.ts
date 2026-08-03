@@ -3,7 +3,7 @@
 // ════════════════════════════════════════════════
 
 import { NextRequest, NextResponse } from "next/server";
-import { getFirestore } from "@/lib/firebase/admin";
+import { getFirestore, type Firestore } from "@/lib/firebase/admin";
 import { verifySession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -15,12 +15,14 @@ export async function GET(request: NextRequest) {
   }
 
   const status = request.nextUrl.searchParams.get("status");
-  const db = getFirestore();
+  const db: Firestore = getFirestore();
 
-  let query = db.collection("inscricoes").orderBy("createdAt", "desc");
+  // Sem orderBy para evitar exigir indice composto (status + createdAt).
+  // Filtra por status se informado.
+  let query = db.collection("inscricoes");
   if (status) {
     const statuses = status.split(",");
-    query = query.where("status", "in", statuses);
+    query = query.where("status", "in", statuses) as typeof query;
   }
 
   const snap = await query.limit(100).get();
