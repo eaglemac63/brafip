@@ -63,7 +63,7 @@ export default function AvaliacaoPage() {
 
         // Busca inscrição
         const resInsc = await fetch(`/api/inscricoes/${inscricaoId}`, {
-          headers: { Authorization: *** ${token}` },
+          headers: { Authorization: `Bearer ${token}` },
         });
         if (resInsc.ok) {
           const dataInsc = await resInsc.json();
@@ -74,7 +74,7 @@ export default function AvaliacaoPage() {
 
         // Busca avaliações existentes desta inscrição
         const resAvals = await fetch(`/api/avaliacoes?inscricaoId=${inscricaoId}`, {
-          headers: { Authorization: *** ${token}` },
+          headers: { Authorization: `Bearer ${token}` },
         });
         if (resAvals.ok) {
           const dataAvals = await resAvals.json();
